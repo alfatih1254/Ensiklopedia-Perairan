@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🌊 Ocean Explorer - Selami Kedalaman Laut</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+  
+  body {
+    background: #000;
+    overflow-x: hidden;
+    color: white;
+    cursor: default;
+  }
+
+  .ocean-container {
+    position: relative;
+    width: 100%;
+    height: 12000px;
+    background: linear-gradient(
+      to bottom,
+      #87CEEB 0%,
+      #4A90E2 2%,
+      #2E5C8A 5%,
+      #1E3A5F 8%,
+      #0F2847 12%,
+      #0A1F3D 18%,
+      #061530 25%,
+      #030D1F 35%,
+      #020814 45%,
+      #010510 55%,
+      #000308 65%,
+      #000205 75%,
+      #000103 85%,
+      #000000 100%
+    );
+  }
+
+  /* Light rays at surface */
+  .light-rays {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 800px;
+    background: 
+      linear-gradient(180deg, rgba(255,255,255,0.3) 0%, transparent 100%),
+      repeating-linear-gradient(90deg, transparent 0px, transparent 80px, rgba(255,255,255,0.05) 80px, rgba(255,255,255,0.05) 100px);
+    pointer-events: none;
+  }
+
+  /* Bubbles */
+  .bubble {
+    position: absolute;
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.4), rgba(255,255,255,0.1));
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.3);
+    animation: rise 10s infinite ease-in;
+    pointer-events: none;
+  }
+
+  @keyframes rise {
+    0% { transform: translateY(0) translateX(0) scale(1); opacity: 0.7; }
+    50% { transform: translateY(-200px) translateX(30px) scale(1.1); }
+    100% { transform: translateY(-400px) translateX(-20px) scale(0.8); opacity: 0; }
+  }
+
+  /* Depth indicator - modern glassmorphism */
+  .depth-indicator {
+    position: fixed;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(10, 20, 40, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    padding: 25px;
+    border-radius: 20px;
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    z-index: 100;
+    min-width: 220px;
+    box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+
+  .depth-value {
+    font-size: 2.8em;
+    font-weight: 900;
+    background: linear-gradient(135deg, #00ffff, #00ff88);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 5px;
+    font-family: 'Courier New', monospace;
+  }
+
+  .depth-label {
+    font-size: 0.85em;
+    color: #8892b0;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  .pressure-value {
+    font-size: 2em;
+    font-weight: 700;
+    background: linear-gradient(135deg, #ffd700, #ff8c00);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 5px;
+    font-family: 'Courier New', monospace;
+  }
+
+  .pressure-label {
+    font-size: 0.8em;
+    color: #8892b0;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  .zone-indicator {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    font-size: 0.9em;
+    font-weight: 700;
+    text-align: center;
+    padding: 10px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.3);
+  }
+
+  .progress-bar {
+    position: fixed;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 6px;
+    height: 400px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    z-index: 100;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background: linear-gradient(180deg, #00ffff, #00ff88, #ffd700);
+    border-radius: 3px;
+    transition: height 0.3s;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+  }
+
+  .scroll-hint {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(10, 20, 40, 0.8);
+    backdrop-filter: blur(20px);
+    padding: 15px 30px;
+    border-radius: 25px;
+    border: 1px solid rgba(0, 255, 255, 0.4);
+    z-index: 100;
+    text-align: center;
+    animation: bounce 2s infinite;
+    box-shadow: 0 8px 32px rgba(0, 255, 255, 0.2);
+  }
+
+  @keyframes bounce {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50% { transform: translateX(-50%) translateY(-10px); }
+  }
+
+  .scroll-hint p {
+    color: #00ffff;
+    font-weight: 700;
+    font-size: 1em;
+  }
+
+  .scroll-hint small {
+    color: #8892b0;
+    font-size: 0.8em;
+  }
+
+  /* Animal cards */
+  .animal {
+    position: absolute;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .animal:hover {
+    transform: scale(1.4);
+    z-index: 50;
+  }
+
+  .animal-emoji {
+    font-size: 3.5em;
+    display: block;
+    animation: float 4s ease-in-out infinite;
+    filter: drop-shadow(0 0 15px rgba(0, 255, 255, 0.5));
+  }
+
+  .animal:hover .animal-emoji {
+    filter: drop-shadow(0 0 25px rgba(0, 255, 255, 0.9));
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    25% { transform: translateY(-8px) rotate(2deg); }
+    75% { transform: translateY(-4px) rotate(-2deg); }
+  }
+
+  .animal-name {
+    background: rgba(10, 20, 40, 0.85);
+    backdrop-filter: blur(10px);
+    padding: 5px 12px;
+    border-radius: 15px;
+    font-size: 0.8em;
+    font-weight: 700;
+    color: #00ffff;
+    white-space: nowrap;
+    margin-top: 5px;
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    opacity: 0.9;
+  }
+
+  .animal:hover .animal-name {
+    opacity: 1;
+    background: rgba(0, 255, 255, 0.2);
+  }
+
+  /* Depth markers */
+  .depth-marker {
+    position: absolute;
+    left: 250px;
+    width: calc(100% - 550px);
+    border-top: 1px dashed rgba(255, 255, 255, 0.2);
+    padding: 5px 10px;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.85em;
+    font-weight: 600;
+    font-family: 'Courier New', monospace;
+  }
+
+  .zone-label {
+    position: absolute;
+    right: 50px;
+    background: rgba(10, 20, 40, 0.8);
+    backdrop-filter: blur(10px);
+    padding: 12px 20px;
+    border-radius: 12px;
+    border-left: 4px solid;
+    font-size: 0.95em;
+    font-weight: 700;
+    color: white;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  }
+
+  /* Modal - Modern glassmorphism */
+  .modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .modal.show {
+    display: flex;
+    animation: fadeIn 0.4s;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .modal-content {
+    background: linear-gradient(135deg, rgba(10, 25, 50, 0.95), rgba(0, 15, 30, 0.95));
+    backdrop-filter: blur(30px);
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    border-radius: 25px;
+    max-width: 650px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 35px;
+    position: relative;
+    animation: slideUp 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 
+      0 20px 60px rgba(0, 0, 0, 0.8),
+      0 0 60px rgba(0, 255, 255, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+
+  .modal-content::-webkit-scrollbar { width: 6px; }
+  .modal-content::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); border-radius: 3px; }
+  .modal-content::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #00ffff, #00ff88); border-radius: 3px; }
+
+  @keyframes slideUp {
+    from { transform: translateY(80px) scale(0.9); opacity: 0; }
+    to { transform: translateY(0) scale(1); opacity: 1; }
+  }
+
+  .modal-close {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: rgba(255, 0, 100, 0.2);
+    border: 1px solid rgba(255, 0, 100, 0.5);
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.3em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+  }
+
+  .modal-close:hover {
+    background: rgba(255, 0, 100, 0.5);
+    transform: rotate(90deg) scale(1.1);
+  }
+
+  .modal-header {
+    text-align: center;
+    margin-bottom: 25px;
+    padding-bottom: 25px;
+    border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+  }
+
+  .modal-emoji {
+    font-size: 7em;
+    margin-bottom: 15px;
+    display: block;
+    animation: float 3s ease-in-out infinite;
+    filter: drop-shadow(0 0 30px rgba(0, 255, 255, 0.6));
+  }
+
+  .modal-title {
+    font-size: 2.3em;
+    background: linear-gradient(135deg, #00ffff, #00ff88);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 900;
+    margin-bottom: 8px;
+  }
+
+  .modal-latin {
+    color: #8892b0;
+    font-style: italic;
+    font-size: 1.05em;
+  }
+
+  .modal-depth {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 140, 0, 0.15));
+    border: 1px solid rgba(255, 215, 0, 0.4);
+    padding: 15px;
+    border-radius: 15px;
+    text-align: center;
+    margin-bottom: 25px;
+    color: #ffd700;
+    font-weight: 700;
+    font-size: 1.05em;
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  .modal-depth span {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .info-section {
+    margin-bottom: 25px;
+  }
+
+  .info-section h3 {
+    background: linear-gradient(135deg, #00ff88, #00ffff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-size: 1.3em;
+    margin-bottom: 15px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .info-text {
+    color: #e0e0e0;
+    line-height: 1.8;
+    font-size: 1em;
+  }
+
+  .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 25px;
+  }
+
+  .info-card {
+    background: rgba(0, 255, 255, 0.08);
+    border: 1px solid rgba(0, 255, 255, 0.2);
+    padding: 18px;
+    border-radius: 15px;
+    transition: all 0.3s;
+  }
+
+  .info-card:hover {
+    background: rgba(0, 255, 255, 0.15);
+    transform: translateY(-3px);
+    box-shadow: 0 10px 30px rgba(0, 255, 255, 0.2);
+  }
+
+  .info-label {
+    color: #8892b0;
+    font-size: 0.8em;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+
+  .info-value {
+    color: white;
+    font-size: 1.15em;
+    font-weight: 700;
+  }
+
+  .facts-list {
+    list-style: none;
+    padding: 0;
+  }
+
+  .facts-list li {
+    padding: 12px 0 12px 35px;
+    position: relative;
+    color: #e0e0e0;
+    line-height: 1.6;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 0.95em;
+  }
+
+  .facts-list li::before {
+    content: '🌊';
+    position: absolute;
+    left: 0;
+    font-size: 1.1em;
+  }
+
+  .facts-list li:last-child {
+    border-bottom: none;
+  }
+
+  @media (max-width: 768px) {
+    .depth-indicator {
+      left: 10px;
+      min-width: 160px;
+      padding: 15px;
+    }
+    .depth-value { font-size: 2em; }
+    .pressure-value { font-size: 1.4em; }
+    .animal-emoji { font-size: 2.5em; }
+    .modal-emoji { font-size: 4.5em; }
+    .modal-title { font-size: 1.6em; }
+    .info-grid { grid-template-columns: 1fr; }
+    .progress-bar { display: none; }
+    .depth-marker { left: 180px; width: calc(100% - 200px); }
+    .zone-label { right: 10px; font-size: 0.8em; padding: 8px 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="ocean-container" id="oceanContainer">
+  <div class="light-rays"></div>
+</div>
+
+<div class="depth-indicator">
+  <div class="depth-value" id="depthValue">0m</div>
+  <div class="depth-label">Kedalaman</div>
+  <div class="pressure-value" id="pressureValue">1.0 atm</div>
+  <div class="pressure-label">Tekanan Air</div>
+  <div class="zone-indicator" id="zoneIndicator">🌊 Permukaan</div>
+</div>
+
+<div class="progress-bar">
+  <div class="progress-fill" id="progressFill" style="height: 0%;"></div>
+</div>
+
+<div class="scroll-hint" id="scrollHint">
+  <p>⬇️ Scroll untuk menyelam</p>
+  <small>Klik hewan untuk info detail</small>
+</div>
+
+<div class="modal" id="modal">
+  <div class="modal-content" id="modalContent"></div>
+</div>
+
+<script>
+const ANIMALS = [
+  // === ZONE 1: SUNLIGHT (0-200m) ===
+  { emoji: '', name: 'Ikan Badut', latin: 'Amphiprioninae', depth: 30, lifespan: '6-10 tahun', size: '7-13 cm', diet: 'Alga, zooplankton', description: 'Ikan badut hidup bersimbiosis dengan anemon laut. Mereka kebal terhadap sengatan anemon dan berlindung di dalamnya.', facts: ['Semua ikan badut lahir sebagai jantan', 'Mereka bisa berubah jadi betina', 'Hidup dalam kelompok dengan hierarki', 'Anemon melindungi dari predator', 'Ikan Nemo adalah spesies Ocellaris'] },
+  { emoji: '🐢', name: 'Penyu Hijau', latin: 'Chelonia mydas', depth: 50, lifespan: '60-80 tahun', size: '1-1.5 meter', diet: 'Lamun, alga', description: 'Penyu hijau adalah penyu herbivora yang bermigrasi ribuan kilometer antara tempat makan dan bertelur.', facts: ['Bisa menahan napas 5 jam', 'Bermigrasi 2,600 km untuk bertelur', 'Suhu pasir menentukan jenis kelamin', 'Penyu hijau adalah vegetarian', 'Kembali ke pantai lahir untuk bertelur'] },
+  { emoji: '🐬', name: 'Lumba-lumba', latin: 'Delphinidae', depth: 80, lifespan: '20-50 tahun', size: '1.5-4 meter', diet: 'Ikan, cumi-cumi', description: 'Lumba-lumba adalah mamalia laut cerdas yang menggunakan echolocation untuk navigasi dan berburu.', facts: ['Tidur dengan satu mata terbuka', 'Punya nama untuk setiap individu', 'Bisa berlari 37 km/jam di air', 'Hidup dalam pod yang kompleks', 'Bisa menggunakan alat'] },
+  { emoji: '🦈', name: 'Hiu Karang', latin: 'Carcharhinus', depth: 120, lifespan: '25 tahun', size: '1.5-3 meter', diet: 'Ikan kecil, udang', description: 'Hiu karang adalah predator penting di ekosistem terumbu karang yang menjaga keseimbangan populasi ikan.', facts: ['Harus berenang terus untuk bernapas', 'Bisa mendeteksi listrik dari mangsa', 'Gigi tumbuh terus sepanjang hidup', 'Tidak menyerang manusia biasanya', 'Penting untuk ekosistem karang'] },
+  { emoji: '', name: 'Ubur-ubur', latin: 'Medusozoa', depth: 150, lifespan: '1-3 tahun', size: '1 cm - 2 meter', diet: 'Plankton, ikan kecil', description: 'Ubur-ubur adalah hewan tanpa otak, jantung, atau darah. Beberapa spesies bisa hidup abadi.', facts: ['95% tubuh adalah air', 'Turritopsis bisa hidup abadi', 'Tidak punya otak tapi bisa belajar', 'Ada sejak 500 juta tahun lalu', 'Beberapa ubur-ubur berbisa mematikan'] },
+  { emoji: '', name: 'Pari Manta', latin: 'Mobula birostris', depth: 180, lifespan: '40 tahun', size: '3-7 meter', diet: 'Plankton, ikan kecil', description: 'Pari manta adalah pari terbesar di dunia yang dikenal cerdas dan suka bermain dengan penyelam.', facts: ['Otak terbesar di antara ikan', 'Bisa mengenali diri di cermin', 'Lompatan bisa 2 meter dari air', 'Bersih di "cleaning station"', 'Tidak berbahaya untuk manusia'] },
+
+  // === ZONE 2: TWILIGHT (200-1000m) ===
+  { emoji: '🦈', name: 'Hiu Putih Besar', latin: 'Carcharodon carcharias', depth: 250, lifespan: '30-70 tahun', size: '4-6 meter', diet: 'Anjing laut, ikan besar', description: 'Hiu putih besar adalah predator puncak lautan dengan indra yang sangat tajam.', facts: ['Bisa mencium darah dari 5 km', 'Ganti gigi setiap 2 minggu', 'Ada sebelum dinosaurus', 'Bisa melompat 3 meter dari air', 'Jantung berdetak 10x/menit saat berburu'] },
+  { emoji: '🐟', name: 'Ikan Pedang', latin: 'Xiphias gladius', depth: 350, lifespan: '9 tahun', size: '3 meter', diet: 'Ikan, cumi-cumi', description: 'Ikan pedang adalah salah satu ikan tercepat di laut dengan "pedang" panjang di moncongnya.', facts: ['Bisa berenang 110 km/jam', 'Pedangnya untuk menikam mangsa', 'Bisa menyelam 550 meter', 'Darahnya hangat seperti mamalia', 'Ikan tercepat di laut'] },
+  { emoji: '🦭', name: 'Anjing Laut', latin: 'Pinnipedia', depth: 450, lifespan: '20-30 tahun', size: '1.5-3 meter', diet: 'Ikan, cumi-cumi', description: 'Anjing laut adalah mamalia laut yang bisa menyelam sangat dalam untuk berburu.', facts: ['Bisa menahan napas 2 jam', 'Bisa menyelam 1,500 meter', 'Tidur di dalam air', 'Bisa berenang 40 km/jam', 'Gajah laut adalah yang terbesar'] },
+  { emoji: '🐋', name: 'Paus Biru', latin: 'Balaenoptera musculus', depth: 550, lifespan: '80-90 tahun', size: '24-30 meter', diet: 'Krill (udang kecil)', description: 'Paus biru adalah hewan terbesar yang pernah hidup di Bumi, lebih besar dari dinosaurus.', facts: ['Hewan terbesar sepanjang sejarah', 'Jantung seukuran mobil kecil', 'Lidah beratnya seberat gajah', 'Bisa menghasilkan suara 188 desibel', 'Bayi paus biru beratnya 2.5 ton'] },
+  { emoji: '🐙', name: 'Gurita', latin: 'Octopoda', depth: 700, lifespan: '1-5 tahun', size: '0.1-9 meter', diet: 'Kepiting, ikan, kerang', description: 'Gurita adalah cephalopoda cerdas dengan 8 lengan dan kemampuan kamuflase luar biasa.', facts: ['Punya 3 jantung dan darah biru', 'Bisa berubah warna dalam 0.3 detik', 'Punya 9 otak (1 pusat, 8 di lengan)', 'Bisa membuka toples', 'Bisa menyembur tinta'] },
+  { emoji: '🦑', name: 'Cumi-cumi Raksasa', latin: 'Architeuthis dux', depth: 900, lifespan: '5 tahun', size: '10-13 meter', diet: 'Ikan, cumi lain', description: 'Cumi-cumi raksasa adalah salah satu invertebrata terbesar di dunia dengan mata sebesar piring.', facts: ['Mata seukuran piring makan', 'Pertarungan epik dengan paus sperma', 'Pertama difoto hidup tahun 2004', 'Bisa berubah warna', 'Hidup di laut dalam yang gelap'] },
+
+  // === ZONE 3: MIDNIGHT (1000-4000m) ===
+  { emoji: '🐟', name: 'Anglerfish', latin: 'Lophiiformes', depth: 1200, lifespan: '25 tahun', size: '20 cm - 1 meter', diet: 'Ikan, krustasea', description: 'Anglerfish memiliki "lampu" di kepalanya untuk menarik mangsa di kegelapan laut dalam.', facts: ['Punya lampu bioluminescence di kepala', 'Jantan 10x lebih kecil dari betina', 'Jantan menempel permanen ke betina', 'Mulutnya bisa menelan mangsa 2x ukuran', 'Gigi bisa melipat ke dalam'] },
+  { emoji: '', name: 'Ikan Buntal', latin: 'Tetraodontidae', depth: 1500, lifespan: '10 tahun', size: '30-90 cm', diet: 'Kerang, bulu babi', description: 'Ikan buntal bisa mengembang menjadi bola berduri saat terancam. Beberapa spesies sangat beracun.', facts: ['Bisa mengembang 3x ukuran normal', 'Racunnya 1,200x lebih kuat dari sianida', 'Tidak ada antidote untuk racunnya', 'Di Jepang disebut fugu (makanan mahal)', 'Bisa berenang dengan sirip kecil'] },
+  { emoji: '🦑', name: 'Cumi Vampire', latin: 'Vampyroteuthis infernalis', depth: 1800, lifespan: '8 tahun', size: '30 cm', diet: 'Detritus (sampah laut)', description: 'Cumi vampire adalah hewan laut dalam yang aneh dengan mata besar dan "jubah" seperti vampire.', facts: ['Nama ilmiahnya berarti "vampire dari neraka"', 'Bukan vampire, tidak menghisap darah', 'Mata terbesar di kerajaan hewan', 'Bisa membalikkan "jubah" untuk pertahanan', 'Hidup di zona oksigen minimum'] },
+  { emoji: '🐟', name: 'Ikan Hatchet', latin: 'Sternoptychidae', depth: 2200, lifespan: '5 tahun', size: '2-12 cm', diet: 'Plankton, krill', description: 'Ikan hatchet memiliki tubuh pipih seperti kapak dan organ bercahaya untuk kamuflase.', facts: ['Bentuk tubuh seperti kapak', 'Punya organ bercahaya (bioluminescence)', 'Bisa berenang vertikal', 'Mata menghadap ke atas', 'Kamuflase dari predator di bawah'] },
+  { emoji: '🐍', name: 'Gulper Eel', latin: 'Eurypharynx pelecanoides', depth: 2600, lifespan: '15 tahun', size: '75 cm', diet: 'Ikan, krustasea', description: 'Gulper eel memiliki mulut raksasa yang bisa menelan mangsa lebih besar dari tubuhnya.', facts: ['Mulutnya 3/4 dari panjang tubuh', 'Bisa menelan mangsa lebih besar dari diri sendiri', 'Ekornya bercahaya untuk menarik mangsa', 'Perutnya bisa mengembang seperti balon', 'Hidup di kegelapan total'] },
+  { emoji: '', name: 'Cumi Raksasa', latin: 'Architeuthis', depth: 3000, lifespan: '5 tahun', size: '12-15 meter', diet: 'Ikan, cumi lain', description: 'Cumi raksasa adalah makhluk misterius laut dalam yang baru difoto hidup tahun 2004.', facts: ['Mata seukuran bola basket', 'Pertarungan epik dengan paus sperma', 'Hidup di kegelapan total', 'Pertama difoto tahun 2004', 'Bisa tumbuh 1 meter per tahun'] },
+  { emoji: '', name: 'Dumbo Octopus', latin: 'Grimpoteuthis', depth: 3500, lifespan: '3-5 tahun', size: '20-30 cm', diet: 'Cacing, krustasea', description: 'Dumbo octopus adalah gurita lucu dengan "telinga" seperti gajah Dumbo yang digunakan untuk berenang.', facts: ['Dinamai dari gajah Dumbo', '"Telinga" adalah sirip untuk berenang', 'Hidup di kedalaman 3,000-4,000m', 'Menelan mangsa utuh', 'Salah satu hewan terdalam yang diketahui'] },
+
+  // === ZONE 4: ABYSSAL (4000-6000m) ===
+  { emoji: '🦞', name: 'Lobster Laut Dalam', latin: 'Nephropidae', depth: 4200, lifespan: '50-100 tahun', size: '25-60 cm', diet: 'Ikan, kerang, cacing', description: 'Lobster laut dalam adalah krustasea besar yang bisa hidup sangat lama dan terus tumbuh sepanjang hidup.', facts: ['Bisa hidup 100+ tahun', 'Terus tumbuh sepanjang hidup', 'Darah berwarna biru', 'Bisa regenerasi kaki', 'Lobster tertua berusia 140 tahun'] },
+  { emoji: '🦐', name: 'Udang Raksasa', latin: 'Bathynectes', depth: 4600, lifespan: '10 tahun', size: '30 cm', diet: 'Detritus, hewan kecil', description: 'Udang laut dalam adalah krustasea yang beradaptasi dengan tekanan ekstrem dan kegelapan.', facts: ['Bisa tahan tekanan 350 atm', 'Tidak punya pigmen (transparan)', 'Mata mengecil atau hilang', 'Cangkang lebih tipis dari udang dangkal', 'Bergerak sangat lambat'] },
+  { emoji: '🕷️', name: 'Sea Spider', latin: 'Pycnogonida', depth: 5000, lifespan: '5-10 tahun', size: '1 cm - 70 cm', diet: 'Anemon, spons, karang', description: 'Sea spider adalah arthropoda laut dalam dengan kaki panjang dan tubuh kecil.', facts: ['Bukan laba-laba sebenarnya', 'Di laut dalam bisa raksasa (70 cm)', 'Jantan yang mengasuh telur', 'Tidak punya sistem pernapasan', 'Kaki panjang untuk berjalan di lumpur'] },
+  { emoji: '', name: 'Teripang Laut', latin: 'Holothuroidea', depth: 5400, lifespan: '5-10 tahun', size: '10 cm - 3 meter', diet: 'Detritus, plankton', description: 'Teripang laut dalam adalah hewan lunak yang membersihkan dasar laut dengan memakan sampah organik.', facts: ['Bisa mengeluarkan organ dalam untuk pertahanan', 'Meregenerasi organ yang hilang', 'Penting untuk ekosistem laut', 'Beberapa spesies beracun', 'Bentuk seperti mentimun'] },
+  { emoji: '🐟', name: 'Ikan Snailfish', latin: 'Liparidae', depth: 5800, lifespan: 'Tidak diketahui', size: '10-30 cm', diet: 'Krustasea kecil', description: 'Snailfish adalah ikan yang hidup di kedalaman ekstrem dengan tubuh transparan dan lunak.', facts: ['Ikan terdalam yang pernah ditemukan', 'Tubuh transparan dan lunak', 'Tidak punya sisik', 'Bisa tahan tekanan 600+ atm', 'Ditemukan di Palung Mariana'] },
+
+  // === ZONE 5: HADAL (6000-11000m) ===
+  { emoji: '🦠', name: 'Xenophyophore', latin: 'Xenophyophorea', depth: 6500, lifespan: 'Tidak diketahui', size: '1-20 cm', diet: 'Bakteri, detritus', description: 'Xenophyophore adalah organisme bersel tunggal terbesar di dunia, hidup di kedalaman ekstrem.', facts: ['Organisme bersel tunggal terbesar', 'Hidup di kedalaman 5,000-10,000m', 'Bentuk seperti spons', 'Penting untuk ekosistem laut dalam', 'Baru dipelajari secara mendalam'] },
+  { emoji: '', name: 'Amphipoda Raksasa', latin: 'Alicella gigantea', depth: 7200, lifespan: '10+ tahun', size: '30 cm', diet: 'Detritus, bangkai', description: 'Amphipoda raksasa adalah krustasea seperti udang yang hidup di palung laut terdalam.', facts: ['Bisa hidup di Palung Mariana', 'Ukurannya 10x amphipoda normal', 'Makan bangkai yang tenggelam', 'Tahan tekanan 600+ atm', 'Hewan paling dalam yang diketahui'] },
+  { emoji: '🦠', name: 'Foraminifera', latin: 'Foraminifera', depth: 8000, lifespan: 'Bervariasi', size: '0.1 mm - 10 cm', diet: 'Bakteri, alga', description: 'Foraminifera adalah organisme mikroskopis dengan cangkang yang hidup di dasar laut terdalam.', facts: ['Ada sejak 500 juta tahun', 'Cangkangnya jadi batu kapur', 'Indikator perubahan iklim', 'Bisa hidup di kedalaman 10,000m', 'Penting untuk geologi'] },
+  { emoji: '🦠', name: 'Bakteri Laut Dalam', latin: 'Deep-sea bacteria', depth: 8800, lifespan: 'Bervariasi', size: 'Mikroskopis', diet: 'Bahan kimia, detritus', description: 'Bakteri laut dalam adalah organisme paling banyak di Bumi, hidup di kondisi ekstrem.', facts: ['Organisme paling banyak di Bumi', 'Bisa hidup tanpa matahari', 'Menggunakan bahan kimia untuk energi', 'Tahan tekanan dan suhu ekstrem', 'Penting untuk siklus nutrisi'] },
+  { emoji: '🌋', name: 'Cacing Tabung Raksasa', latin: 'Riftia pachyptila', depth: 9500, lifespan: '250 tahun', size: '1-3 meter', diet: 'Bahan kimia vulkanik', description: 'Cacing tabung raksasa hidup di hydrothermal vent tanpa matahari, menggunakan energi kimia.', facts: ['Hidup tanpa sinar matahari', 'Suhu air bisa 400°C', 'Menggunakan kemosintesis', 'Tidak punya mulut atau perut', 'Simbiosis dengan bakteri'] },
+  { emoji: '️', name: 'Organisme Palung Mariana', latin: 'Hadal organisms', depth: 10500, lifespan: 'Tidak diketahui', size: 'Mikroskopis - 30 cm', diet: 'Detritus, bakteri', description: 'Organisme di Palung Mariana hidup di kedalaman paling ekstrem di Bumi dengan tekanan 1,000 atm.', facts: ['Tekanan 1,000x atmosfer', 'Suhu hampir beku', 'Kegelapan total', 'Amphipoda raksasa hidup di sini', 'Titik terdalam: Challenger Deep (10,994m)'] },
+  { emoji: '🌑', name: 'Kehidupan Challenger Deep', latin: 'Unknown species', depth: 10994, lifespan: 'Tidak diketahui', size: 'Mikroskopis', diet: 'Bahan kimia, detritus', description: 'Challenger Deep adalah titik terdalam di Bumi (10,994m). Hanya sedikit organisme yang bisa hidup di sini.', facts: ['Titik terdalam di Bumi', 'Tekanan 1,086 atm', 'Hanya 3 orang pernah ke sini', 'Lebih dalam dari Everest tingginya', 'Kehidupan masih misterius'] }
+];
+
+const ZONES = [
+  { depth: 0, name: '🌊 Epipelagic (Sunlight Zone)', color: '#87CEEB', desc: '0-200m • Cahaya matahari masih masuk' },
+  { depth: 200, name: '🌅 Mesopelagic (Twilight Zone)', color: '#4A90E2', desc: '200-1000m • Cahaya remang-remang' },
+  { depth: 1000, name: ' Bathypelagic (Midnight Zone)', color: '#1E3A5F', desc: '1000-4000m • Kegelapan total' },
+  { depth: 4000, name: '🌑 Abyssopelagic (Abyssal Zone)', color: '#061530', desc: '4000-6000m • Dasar laut dalam' },
+  { depth: 6000, name: '⚫ Hadalpelagic (Trenches)', color: '#000103', desc: '6000-11000m • Palung terdalam' }
+];
+
+const oceanContainer = document.getElementById('oceanContainer');
+
+// Create bubbles
+for (let i = 0; i < 30; i++) {
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  const size = Math.random() * 20 + 10;
+  bubble.style.width = size + 'px';
+  bubble.style.height = size + 'px';
+  bubble.style.left = Math.random() * 100 + '%';
+  bubble.style.top = Math.random() * 2000 + 'px';
+  bubble.style.animationDelay = Math.random() * 10 + 's';
+  bubble.style.animationDuration = (Math.random() * 10 + 8) + 's';
+  oceanContainer.appendChild(bubble);
+}
+
+// Create animals - FIXED POSITIONING
+ANIMALS.forEach((animal, index) => {
+  const animalEl = document.createElement('div');
+  animalEl.className = 'animal';
+  // Convert depth (meters) to pixels - 1m = 1px
+  animalEl.style.top = animal.depth + 'px';
+  // Alternate left/right positioning for better distribution
+  const leftPos = 10 + (index % 5) * 18 + Math.random() * 5;
+  animalEl.style.left = leftPos + '%';
+  animalEl.onclick = () => showAnimalDetail(index);
+  
+  animalEl.innerHTML = `
+    <span class="animal-emoji">${animal.emoji}</span>
+    <div class="animal-name">${animal.name}</div>
+  `;
+  
+  oceanContainer.appendChild(animalEl);
+});
+
+// Create depth markers
+const markerDepths = [0, 500, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000, 10994];
+markerDepths.forEach(depth => {
+  const marker = document.createElement('div');
+  marker.className = 'depth-marker';
+  marker.style.top = depth + 'px';
+  marker.textContent = `━━━ ${depth}m ━━`;
+  oceanContainer.appendChild(marker);
+});
+
+// Create zone labels
+ZONES.forEach(zone => {
+  const label = document.createElement('div');
+  label.className = 'zone-label';
+  label.style.top = (zone.depth + 80) + 'px';
+  label.style.borderLeftColor = zone.color;
+  label.innerHTML = `<div style="font-size: 1.1em; margin-bottom: 3px;">${zone.name}</div><div style="font-size: 0.75em; color: #8892b0; font-weight: 500;">${zone.desc}</div>`;
+  oceanContainer.appendChild(label);
+});
+
+// Scroll handler
+window.addEventListener('scroll', () => {
+  const scrollY = window.scrollY;
+  const maxScroll = 10994;
+  const depth = Math.min(scrollY, maxScroll);
+  const pressure = (1 + depth / 10).toFixed(1);
+  const progress = (depth / maxScroll) * 100;
+  
+  document.getElementById('depthValue').textContent = Math.floor(depth) + 'm';
+  document.getElementById('pressureValue').textContent = pressure + ' atm';
+  document.getElementById('progressFill').style.height = progress + '%';
+  
+  // Update zone
+  let currentZone = ZONES[0];
+  for (let i = ZONES.length - 1; i >= 0; i--) {
+    if (depth >= ZONES[i].depth) {
+      currentZone = ZONES[i];
+      break;
+    }
+  }
+  document.getElementById('zoneIndicator').innerHTML = `<div style="font-size: 1.1em;">${currentZone.name}</div><div style="font-size: 0.75em; color: #8892b0; margin-top: 3px;">${currentZone.desc}</div>`;
+  document.getElementById('zoneIndicator').style.color = currentZone.color;
+  document.getElementById('zoneIndicator').style.borderColor = currentZone.color;
+  
+  // Hide scroll hint after scrolling
+  if (scrollY > 100) {
+    document.getElementById('scrollHint').style.opacity = '0';
+    document.getElementById('scrollHint').style.pointerEvents = 'none';
+  } else {
+    document.getElementById('scrollHint').style.opacity = '1';
+    document.getElementById('scrollHint').style.pointerEvents = 'auto';
+  }
+});
+
+function showAnimalDetail(index) {
+  const animal = ANIMALS[index];
+  const modal = document.getElementById('modal');
+  const content = document.getElementById('modalContent');
+  
+  const pressure = (1 + animal.depth / 10).toFixed(1);
+  
+  // Find zone
+  let currentZone = ZONES[0];
+  for (let i = ZONES.length - 1; i >= 0; i--) {
+    if (animal.depth >= ZONES[i].depth) {
+      currentZone = ZONES[i];
+      break;
+    }
+  }
+  
+  content.innerHTML = `
+    <button class="modal-close" onclick="closeModal()"></button>
+    
+    <div class="modal-header">
+      <span class="modal-emoji">${animal.emoji}</span>
+      <h2 class="modal-title">${animal.name}</h2>
+      <p class="modal-latin">${animal.latin}</p>
+    </div>
+    
+    <div class="modal-depth">
+      <span> ${animal.depth}m</span>
+      <span>⚡ ${pressure} atm</span>
+      <span>🌊 ${currentZone.name.split(' ').slice(1).join(' ')}</span>
+    </div>
+    
+    <div class="info-grid">
+      <div class="info-card">
+        <div class="info-label">⏱️ Umur</div>
+        <div class="info-value">${animal.lifespan}</div>
+      </div>
+      <div class="info-card">
+        <div class="info-label">📏 Ukuran</div>
+        <div class="info-value">${animal.size}</div>
+      </div>
+      <div class="info-card">
+        <div class="info-label">🍽️ Makanan</div>
+        <div class="info-value">${animal.diet}</div>
+      </div>
+      <div class="info-card">
+        <div class="info-label"> Kedalaman</div>
+        <div class="info-value">${animal.depth} meter</div>
+      </div>
+    </div>
+    
+    <div class="info-section">
+      <h3>📖 Tentang ${animal.name}</h3>
+      <p class="info-text">${animal.description}</p>
+    </div>
+    
+    <div class="info-section">
+      <h3>✨ Fakta Menarik</h3>
+      <ul class="facts-list">
+        ${animal.facts.map(fact => `<li>${fact}</li>`).join('')}
+      </ul>
+    </div>
+  `;
+  
+  modal.classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('show');
+}
+
+document.getElementById('modal').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('modal')) {
+    closeModal();
+  }
+});
+</script>
+
+</body>
+</html>
+
